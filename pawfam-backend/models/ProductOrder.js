@@ -11,7 +11,12 @@ const ProductOrderSchema = new mongoose.Schema({
     name: String,
     price: Number,
     quantity: Number,
-    image: String
+    image: String,
+    // vendor reference to support vendor-specific queries
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
   }],
   shippingAddress: {
     fullName: String,

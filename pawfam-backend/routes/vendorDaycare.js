@@ -4,6 +4,7 @@ const express = require('express');
 const DaycareCenter = require('../models/DaycareCenter');
 const auth = require('../middleware/auth');
 const router = express.Router();
+const DaycareBooking = require('../models/DaycareBooking');
 
 // Get all daycare centers (public - for users)
 router.get('/centers', async (req, res) => {
@@ -214,6 +215,38 @@ router.delete('/centers/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('Delete center error:', error);
     res.status(500).json({ message: 'Server error deleting center' });
+  }
+});
+
+// Get bookings for vendor's daycare centers
+router.get('/bookings', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'vendor') {
+      return res.status(403).json({ message: 'Access denied. Vendor role required.' });
+    }
+
+    // To support older bookings (created before we stored vendor/daycareCenterId),
+    // first get the vendor's centers and then search bookings by vendor, centerId or center name.
+    const centers = await DaycareCenter.find({ vendor: req.user._id }).lean();
+    const centerIds = centers.map(c => c._id).filter(Boolean);
+    const centerNames = centers.map(c => c.name).filter(Boolean);
+
+    const query = {
+      $or: [
+        { vendor: req.user._id },
+        { daycareCenterId: { $in: centerIds } },
+        { 'daycareCenter.name': { $in: centerNames } }
+      ]
+    };
+
+    const bookings = await DaycareBooking.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(bookings);
+  } catch (error) {
+    console.error('Get vendor bookings error:', error);
+    res.status(500).json({ message: 'Server error fetching vendor bookings' });
   }
 });
 

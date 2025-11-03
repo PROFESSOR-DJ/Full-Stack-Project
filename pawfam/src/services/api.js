@@ -148,6 +148,11 @@ export const vendorDaycareAPI = {
     const response = await API.get('/vendor/daycare/centers');
     return response.data;
   },
+  // Get bookings for vendor's centers
+  getBookings: async () => {
+    const response = await API.get('/vendor/daycare/bookings');
+    return response.data;
+  },
   getMyCenters: async () => {
     const response = await API.get('/vendor/daycare/my-centers');
     return response.data;
@@ -176,6 +181,11 @@ export const vendorAdoptionAPI = {
     const response = await API.get('/vendor/adoption/my-pets');
     return response.data;
   },
+  // Get adoption applications for this vendor's pets
+  getApplications: async () => {
+    const response = await API.get('/vendor/adoption/applications');
+    return response.data;
+  },
   createPet: async (petData) => {
     const response = await API.post('/vendor/adoption/pets', petData);
     return response.data;
@@ -198,6 +208,11 @@ export const vendorAccessoriesAPI = {
   },
   getMyProducts: async () => {
     const response = await API.get('/vendor/accessories/my-products');
+    return response.data;
+  },
+  // Get orders that include this vendor's products
+  getOrders: async () => {
+    const response = await API.get('/vendor/accessories/orders');
     return response.data;
   },
   createProduct: async (productData) => {

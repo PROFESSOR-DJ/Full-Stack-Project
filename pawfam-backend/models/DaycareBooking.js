@@ -6,6 +6,16 @@ const DaycareBookingSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  // Link to the daycare center document (optional, added to support vendor queries)
+  daycareCenterId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DaycareCenter'
+  },
+  // Store vendor reference for quick vendor lookups
+  vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   daycareCenter: {
     name: String,
     location: String,

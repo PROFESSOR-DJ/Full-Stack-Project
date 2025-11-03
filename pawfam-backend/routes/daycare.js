@@ -8,6 +8,7 @@ router.post('/bookings', auth, async (req, res) => {
   try {
     const {
       daycareCenter,
+      daycareCenterId,
       petName,
       petType,
       petAge,
@@ -20,15 +21,36 @@ router.post('/bookings', auth, async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!daycareCenter || !petName || !petType || !petAge || !email || !mobileNumber || !startDate || !endDate || !totalAmount) {
+    if (!petName || !petType || !petAge || !email || !mobileNumber || !startDate || !endDate || !totalAmount) {
       return res.status(400).json({
         message: 'Please provide all required fields including email and mobile number'
       });
     }
 
+    // If daycareCenterId is provided, fetch the center to attach id/vendor info
+    let centerInfo = daycareCenter;
+    let daycareCenterIdToSave = null;
+    let vendorForBooking = null;
+
+    if (daycareCenterId) {
+      const DaycareCenter = require('../models/DaycareCenter');
+      const center = await DaycareCenter.findById(daycareCenterId).lean();
+      if (center) {
+        centerInfo = {
+          name: center.name,
+          location: center.location,
+          pricePerDay: center.pricePerDay
+        };
+        daycareCenterIdToSave = center._id;
+        vendorForBooking = center.vendor;
+      }
+    }
+
     const booking = new DaycareBooking({
       user: req.user._id,
-      daycareCenter,
+      daycareCenter: centerInfo,
+      daycareCenterId: daycareCenterIdToSave,
+      vendor: vendorForBooking,
       petName,
       petType,
       petAge,
@@ -48,6 +70,8 @@ router.post('/bookings', auth, async (req, res) => {
       booking: {
         _id: booking._id,
         daycareCenter: booking.daycareCenter,
+        daycareCenterId: booking.daycareCenterId,
+        vendor: booking.vendor,
         petName: booking.petName,
         petType: booking.petType,
         petAge: booking.petAge,

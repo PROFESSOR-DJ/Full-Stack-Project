@@ -23,9 +23,25 @@ router.post('/orders', auth, async (req, res) => {
       });
     }
 
+    // Enrich items with vendor info when possible
+    const AccessoryProduct = require('../models/AccessoryProduct');
+    const enrichedItems = await Promise.all((items || []).map(async (it) => {
+      const itemCopy = { ...it };
+      try {
+        if (it.productId) {
+          const prod = await AccessoryProduct.findById(it.productId).lean();
+          if (prod && prod.vendor) itemCopy.vendor = prod.vendor;
+        }
+      } catch (err) {
+        // ignore lookup errors
+        console.error('Failed to lookup product for vendor enrichment', err.message);
+      }
+      return itemCopy;
+    }));
+
     const order = new ProductOrder({
       user: req.user._id,
-      items,
+      items: enrichedItems,
       shippingAddress,
       paymentInfo: {
         cardNumber: paymentInfo.cardNumber ? '****' + paymentInfo.cardNumber.slice(-4) : '',

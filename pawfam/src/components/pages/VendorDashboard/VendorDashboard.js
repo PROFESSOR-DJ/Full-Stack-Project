@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { daycareAPI, productsAPI, adoptionAPI } from '../../../services/api';
+import { daycareAPI, productsAPI, adoptionAPI, vendorDaycareAPI, vendorAccessoriesAPI, vendorAdoptionAPI } from '../../../services/api';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './VendorDashboard.css';
 
@@ -32,29 +32,35 @@ const VendorDashboard = ({ user }) => {
     try {
       setLoading(true);
       
-      // Fetch all requests from different endpoints
+      // Fetch vendor-specific data for all services in parallel
       const [daycareData, adoptionData, productsData] = await Promise.all([
-        daycareAPI.getBookings().catch(() => []),
-        adoptionAPI.getApplications().catch(() => ({ applications: [] })),
-        productsAPI.getOrders().catch(() => [])
+        vendorDaycareAPI.getBookings().catch(() => []),
+        // vendor adoption applications
+        vendorAdoptionAPI.getApplications().catch(() => []),
+        // vendor product orders
+        vendorAccessoriesAPI.getOrders().catch(() => [])
       ]);
-      
+
       setRequests({
         daycare: Array.isArray(daycareData) ? daycareData : [],
-        adoption: adoptionData.applications || [],
+        adoption: Array.isArray(adoptionData) ? adoptionData : (adoptionData.applications || []),
         accessories: Array.isArray(productsData) ? productsData : []
       });
 
-      // Calculate stats
-      const totalDaycare = (Array.isArray(daycareData) ? daycareData : []).length;
-      const totalAdoption = (adoptionData.applications || []).length;
-      const totalAccessories = (Array.isArray(productsData) ? productsData : []).length;
+      // Normalize responses to arrays and calculate stats
+      const daycareArray = Array.isArray(daycareData) ? daycareData : [];
+      const adoptionArray = Array.isArray(adoptionData) ? adoptionData : (adoptionData.applications || []);
+      const accessoriesArray = Array.isArray(productsData) ? productsData : [];
+
+      const totalDaycare = daycareArray.length;
+      const totalAdoption = adoptionArray.length;
+      const totalAccessories = accessoriesArray.length;
       const total = totalDaycare + totalAdoption + totalAccessories;
 
       const allRequests = [
-        ...(Array.isArray(daycareData) ? daycareData : []),
-        ...(adoptionData.applications || []),
-        ...(Array.isArray(productsData) ? productsData : [])
+        ...daycareArray,
+        ...adoptionArray,
+        ...accessoriesArray
       ];
 
       const pending = allRequests.filter(r => 

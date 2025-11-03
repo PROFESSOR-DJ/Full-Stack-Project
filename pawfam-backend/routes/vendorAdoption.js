@@ -4,6 +4,7 @@ const express = require('express');
 const AdoptionPet = require('../models/AdoptionPet');
 const auth = require('../middleware/auth');
 const router = express.Router();
+const AdoptionApplication = require('../models/AdoptionApplication');
 
 // Get all adoption pets (public - for users)
 router.get('/pets', async (req, res) => {
@@ -236,3 +237,24 @@ router.delete('/pets/:id', auth, async (req, res) => {
 });
 
 module.exports = router;
+
+// Vendor: get applications for your pets
+router.get('/applications', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'vendor') {
+      return res.status(403).json({ message: 'Access denied. Vendor role required.' });
+    }
+
+    const pets = await AdoptionPet.find({ vendor: req.user._id }).select('_id').lean();
+    const petIds = pets.map(p => String(p._id));
+
+    const applications = await AdoptionApplication.find({ 'pet.id': { $in: petIds } })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json(applications);
+  } catch (error) {
+    console.error('Get vendor applications error:', error);
+    res.status(500).json({ message: 'Server error fetching vendor applications' });
+  }
+});

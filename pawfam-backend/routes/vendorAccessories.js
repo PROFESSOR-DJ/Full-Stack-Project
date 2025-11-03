@@ -4,6 +4,7 @@ const express = require('express');
 const AccessoryProduct = require('../models/AccessoryProduct');
 const auth = require('../middleware/auth');
 const router = express.Router();
+const ProductOrder = require('../models/ProductOrder');
 
 // Get all products (public - for users)
 router.get('/products', async (req, res) => {
@@ -212,3 +213,38 @@ router.delete('/products/:id', auth, async (req, res) => {
 });
 
 module.exports = router;
+
+// Vendor: get orders for this vendor's products
+router.get('/orders', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'vendor') {
+      return res.status(403).json({ message: 'Access denied. Vendor role required.' });
+    }
+
+    // Orders where any item.vendor matches vendor
+    const orders = await ProductOrder.find({ 'items.vendor': req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Also include legacy orders where items.productId belongs to vendor's products
+    const myProducts = await AccessoryProduct.find({ vendor: req.user._id }).select('_id').lean();
+    const myProductIds = myProducts.map(p => String(p._id));
+
+    if (myProductIds.length > 0) {
+      const legacyOrders = await ProductOrder.find({ 'items.productId': { $in: myProductIds } })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const map = new Map();
+      orders.forEach(o => map.set(String(o._id), o));
+      legacyOrders.forEach(o => map.set(String(o._id), o));
+
+      return res.json(Array.from(map.values()));
+    }
+
+    res.json(orders);
+  } catch (error) {
+    console.error('Get vendor orders error:', error);
+    res.status(500).json({ message: 'Server error fetching vendor orders' });
+  }
+});

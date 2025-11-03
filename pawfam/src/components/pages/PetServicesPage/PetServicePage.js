@@ -226,6 +226,8 @@ const PetServicesPage = ({ user }) => {
       const totalAmount = days * selectedCenter.pricePerDay;
 
       const bookingPayload = {
+        // include center id for server to link booking to vendor/center
+        daycareCenterId: selectedCenter._id,
         daycareCenter: {
           name: selectedCenter.name,
           location: selectedCenter.location,
