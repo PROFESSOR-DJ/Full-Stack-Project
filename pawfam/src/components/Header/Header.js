@@ -43,6 +43,7 @@ const Header = ({ onNavigate, isLoggedIn, onLogout, user }) => {
           {/* Customer-specific links when logged in */}
           {isLoggedIn && user?.role === 'customer' && (
             <>
+              <a href="#" className="nav-link" onClick={() => onNavigate('dashboard')}>Dashboard</a>
               <a href="#" className="nav-link" onClick={() => onNavigate('bookings')}>Bookings</a>
               <a href="#" className="nav-link" onClick={() => onNavigate('profile')}>Profile</a>
             </>
