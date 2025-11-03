@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../../../context/CartContext';
-import { productsAPI } from '../../../services/api';
+import { productsAPI, vendorAccessoriesAPI } from '../../../services/api';
 import './AccessoriesPage.css';
 
 // India states list
@@ -86,8 +86,8 @@ const AccessoriesPage = ({ user }) => {
     return () => clearTimeout(timer);
   }, [searchKeyword]);
 
-  // Mock products data
-  const products = [
+  // Default/mock products (kept as fallback until vendor posts are loaded)
+  const initialProducts = [
     {
       id: 1,
       name: 'Premium Dog Food',
@@ -126,6 +126,43 @@ const AccessoriesPage = ({ user }) => {
     }
   ];
 
+  const [productsList, setProductsList] = useState(initialProducts);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState(null);
+
+  // Fetch vendor accessory posts and use them to populate the products list
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchVendorProducts = async () => {
+      setProductsLoading(true);
+      try {
+        const resp = await vendorAccessoriesAPI.getProducts();
+        // Expect resp to be an array; map defensively
+        if (!mounted) return;
+        if (Array.isArray(resp) && resp.length) {
+          const mapped = resp.map(p => ({
+            id: p._id || p.id || Math.random(),
+            name: p.name || p.title || 'Untitled Product',
+            category: p.category || 'accessories',
+            price: Number(p.price || p.cost || 0),
+            rating: Number(p.rating || 0),
+            image: Array.isArray(p.images) && p.images.length ? p.images[0] : p.image || 'https://placehold.co/300x300/9ca3af/ffffff?text=Product',
+            description: p.description || p.details || ''
+          }));
+          setProductsList(mapped);
+        }
+      } catch (err) {
+        console.error('Error fetching vendor accessories:', err);
+        if (mounted) setProductsError(err);
+      } finally {
+        if (mounted) setProductsLoading(false);
+      }
+    };
+
+    fetchVendorProducts();
+    return () => { mounted = false; };
+  }, []);
+
   const categories = [
     { id: 'all', name: 'All Products' },
     { id: 'food', name: 'Pet Food' },
@@ -134,7 +171,7 @@ const AccessoriesPage = ({ user }) => {
     { id: 'toys', name: 'Toys' }
   ];
 
-  const filteredProducts = products
+  const filteredProducts = productsList
     .filter(product => {
       // Filter by category
       const categoryMatch = selectedCategory === 'all' || product.category === selectedCategory;
@@ -507,18 +544,51 @@ const AccessoriesPage = ({ user }) => {
               </div>
               <div className="product-info">
                 <h3>{product.name}</h3>
-                <p className="product-description">{product.description}</p>
+                <p className="product-description">{product.description || 'No description provided.'}</p>
+
+                {/* Show rating with default fallback to 4.5 if not provided or falsy */}
                 <div className="product-rating">
-                  ⭐ {product.rating}
+                  ⭐ {typeof product.rating === 'number' && !Number.isNaN(product.rating) && product.rating > 0 ? product.rating : 4.5}
                 </div>
-                <div className="product-price">₹{product.price}</div>
-                <button
-                  className="add-to-cart-btn"
-                  onClick={() => addToCart(product)}
-                  disabled={!user}
-                >
-                  {user ? 'Add to Cart' : 'Login to Purchase'}
-                </button>
+
+                {/* Price / discount display */}
+                <div className="product-price">
+                  {product.discountPrice && Number(product.discountPrice) > 0 ? (
+                    <>
+                      <span className="discounted">₹{Number(product.discountPrice).toFixed(2)}</span>
+                      <small className="original">₹{Number(product.price).toFixed(2)}</small>
+                    </>
+                  ) : (
+                    <span>₹{Number(product.price || 0).toFixed(2)}</span>
+                  )}
+                </div>
+
+                {/* Additional product details (show only when present) */}
+                <div className="product-meta">
+                  {product.brand && <div><strong>Brand:</strong> {product.brand}</div>}
+                  {product.petType && <div><strong>Pet Type:</strong> {product.petType}</div>}
+                  {typeof product.stock !== 'undefined' && <div><strong>Stock:</strong> {product.stock}</div>}
+                  {product.weight && <div><strong>Weight:</strong> {product.weight}</div>}
+                  {product.dimensions && product.dimensions.unit && <div><strong>Dimensions unit:</strong> {product.dimensions.unit}</div>}
+                  {product.tags && Array.isArray(product.tags) && product.tags.length > 0 && (
+                    <div className="tag-list"><strong>Tags:</strong> {product.tags.join(', ')}</div>
+                  )}
+                  {product.shippingInfo && (
+                    <div className="shipping-info">
+                      <strong>Shipping:</strong> {product.shippingInfo.freeShipping ? 'Free' : 'Paid'} • {product.shippingInfo.deliveryTime || ''}
+                    </div>
+                  )}
+                </div>
+
+                <div className="product-actions">
+                  <button
+                    className="add-to-cart-btn"
+                    onClick={() => addToCart(product)}
+                    disabled={!user}
+                  >
+                    {user ? 'Add to Cart' : 'Login to Purchase'}
+                  </button>
+                </div>
               </div>
             </div>
           ))

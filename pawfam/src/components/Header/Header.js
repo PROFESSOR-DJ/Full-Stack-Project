@@ -22,7 +22,6 @@ const Header = ({ onNavigate, isLoggedIn, onLogout, user }) => {
           {/* Customer Navigation */}
           {(!isLoggedIn || user?.role === 'customer') && (
             <>
-              <a href="#" className="nav-link" onClick={() => onNavigate('landing')}>Home</a>
               <a href="#" className="nav-link" onClick={() => onNavigate('services')}>Centers</a>
               <a href="#" className="nav-link" onClick={() => onNavigate('accessories')}>Accessories</a>
               <a href="#" className="nav-link" onClick={() => onNavigate('adoption')}>Adoption</a>

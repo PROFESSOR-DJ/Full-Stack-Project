@@ -130,6 +130,9 @@
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* ensure cards stretch equally in the grid */
 }
 
 .pet-card:hover {
@@ -160,6 +163,9 @@
 
 .pet-info {
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto; /* allow info area to grow and keep button at bottom */
 }
 
 .pet-info h3 {
@@ -172,18 +178,28 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  align-items: start;
 }
 
 .detail-item {
   font-size: 0.875rem;
   color: #6b7280;
+  white-space: nowrap; /* keep each detail to a single line */
+  overflow: hidden;
+  text-overflow: ellipsis; /* ellipsis when content is too long */
 }
 
 .pet-description {
   color: #4b5563;
   line-height: 1.6;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  /* limit description to maximum 3 lines and hide overflow */
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .meet-pet-btn {
@@ -200,6 +216,11 @@
 
 .meet-pet-btn:hover {
   background-color: #d97706;
+}
+
+/* keep the action button pinned to the bottom of the card */
+.pet-info .meet-pet-btn {
+  margin-top: auto;
 }
 
 .adoption-modal {

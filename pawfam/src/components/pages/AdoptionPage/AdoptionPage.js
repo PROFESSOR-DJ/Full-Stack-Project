@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { adoptionAPI, profileAPI } from '../../../services/api';
+import { adoptionAPI, profileAPI, vendorAdoptionAPI } from '../../../services/api';
 import './AdoptionPage.css';
 
 const AdoptionPage = ({ user }) => {
@@ -50,8 +50,8 @@ const AdoptionPage = ({ user }) => {
     }
   };
 
-  // Mock data for pets available for adoption
-  const pets = [
+  // Default/mock pets (fallback until vendor posts load)
+  const initialPets = [
     {
       id: 1,
       name: 'Buddy',
@@ -80,20 +80,73 @@ const AdoptionPage = ({ user }) => {
     }
   ];
 
+  const [petsList, setPetsList] = useState(initialPets);
+  const [petsLoading, setPetsLoading] = useState(false);
+  const [petsError, setPetsError] = useState(null);
+
+  // Fetch vendor-posted pets (adoption posts) and replace defaults if available
+  useEffect(() => {
+    let mounted = true;
+    const fetchVendorPets = async () => {
+      setPetsLoading(true);
+      try {
+        const resp = await vendorAdoptionAPI.getPets();
+        if (!mounted) return;
+        if (Array.isArray(resp) && resp.length) {
+          const mapped = resp.map(p => {
+            // normalize shelter/vendor info to a string for safe rendering
+            let shelterStr = '';
+            const s = p.shelter || p.vendorName || (p.vendor && (p.vendor.name || p.vendor.vendorName)) || null;
+            if (!s) shelterStr = 'Vendor';
+            else if (typeof s === 'string') shelterStr = s;
+            else if (typeof s === 'object') {
+              shelterStr = s.name || s.location || s.address || s.vendorName || 'Vendor';
+            } else {
+              shelterStr = String(s);
+            }
+
+            return {
+              id: p._id || p.id || Math.random(),
+              name: p.name || p.title || 'Unnamed Pet',
+              type: p.type || p.animalType || 'Pet',
+              breed: p.breed || p.breedName || '',
+              age: p.age || p.ageInfo || '',
+              gender: p.gender || '',
+              size: p.size || '',
+              description: p.description || p.details || '',
+              image: Array.isArray(p.images) && p.images.length ? p.images[0] : p.image || 'https://placehold.co/300x300/9ca3af/ffffff?text=Pet',
+              status: p.status || 'Available',
+              shelter: shelterStr
+            };
+          });
+          setPetsList(mapped);
+        }
+      } catch (err) {
+        console.error('Error fetching vendor adoption pets:', err);
+        if (mounted) setPetsError(err);
+      } finally {
+        if (mounted) setPetsLoading(false);
+      }
+    };
+
+    fetchVendorPets();
+    return () => { mounted = false; };
+  }, []);
+
   // Filter pets based on search keyword
-  const filteredPets = pets.filter(pet => {
+  const filteredPets = petsList.filter(pet => {
     if (!debouncedSearch) return true;
 
     const searchLower = debouncedSearch.toLowerCase();
     return (
-      pet.name.toLowerCase().includes(searchLower) ||
-      pet.type.toLowerCase().includes(searchLower) ||
-      pet.breed.toLowerCase().includes(searchLower) ||
-      pet.age.toLowerCase().includes(searchLower) ||
-      pet.gender.toLowerCase().includes(searchLower) ||
-      pet.size.toLowerCase().includes(searchLower) ||
-      pet.shelter.toLowerCase().includes(searchLower) ||
-      pet.description.toLowerCase().includes(searchLower)
+      (pet.name && pet.name.toLowerCase().includes(searchLower)) ||
+      (pet.type && pet.type.toLowerCase().includes(searchLower)) ||
+      (pet.breed && pet.breed.toLowerCase().includes(searchLower)) ||
+      (pet.age && pet.age.toLowerCase().includes(searchLower)) ||
+      (pet.gender && pet.gender.toLowerCase().includes(searchLower)) ||
+      (pet.size && pet.size.toLowerCase().includes(searchLower)) ||
+      (pet.shelter && pet.shelter.toLowerCase().includes(searchLower)) ||
+      (pet.description && pet.description.toLowerCase().includes(searchLower))
     );
   });
 
