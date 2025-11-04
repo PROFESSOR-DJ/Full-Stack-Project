@@ -10,6 +10,15 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Live validation state
+  const [pwChecks, setPwChecks] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  });
+
   // Prevent double submission
   const isSubmitting = useRef(false);
 
@@ -20,12 +29,21 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
       newErrors.username = 'Username must be at least 3 characters';
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
+    // Strong email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    // Password strength rules
+    const length = password.length >= 8;
+    const uppercase = /[A-Z]/.test(password);
+    const lowercase = /[a-z]/.test(password);
+    const number = /[0-9]/.test(password);
+    const special = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (!length || !uppercase || !lowercase || !number || !special) {
+      newErrors.password = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character';
     }
 
     if (password !== confirmPassword) {
@@ -103,6 +121,71 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
     }
   };
 
+  // Live input handlers with validation
+  const handleUsernameChange = (value) => {
+    setUsername(value);
+    if (errors.username && value.length >= 3) {
+      setErrors(prev => { const { username, ...rest } = prev; return rest; });
+    }
+  };
+
+  const handleEmailChange = (value) => {
+    setEmail(value);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (errors.email && emailRegex.test(value)) {
+      setErrors(prev => { const { email, ...rest } = prev; return rest; });
+    }
+  };
+
+  const evaluatePassword = (pw) => {
+    const length = pw.length >= 8;
+    const uppercase = /[A-Z]/.test(pw);
+    const lowercase = /[a-z]/.test(pw);
+    const number = /[0-9]/.test(pw);
+    const special = /[!@#$%^&*(),.?":{}|<>]/.test(pw);
+    setPwChecks({ length, uppercase, lowercase, number, special });
+    return length && uppercase && lowercase && number && special;
+  };
+
+  // Pure check without side-effects (used in render checks)
+  const checkPasswordStrength = (pw) => {
+    const length = pw.length >= 8;
+    const uppercase = /[A-Z]/.test(pw);
+    const lowercase = /[a-z]/.test(pw);
+    const number = /[0-9]/.test(pw);
+    const special = /[!@#$%^&*(),.?":{}|<>]/.test(pw);
+    return length && uppercase && lowercase && number && special;
+  };
+
+  const handlePasswordChange = (value) => {
+    setPassword(value);
+    const strong = evaluatePassword(value);
+    if (errors.password && strong) {
+      setErrors(prev => { const { password, ...rest } = prev; return rest; });
+    }
+    // also check confirm password
+    if (confirmPassword && value === confirmPassword) {
+      setErrors(prev => { const { confirmPassword, ...rest } = prev; return rest; });
+    }
+  };
+
+  const handleConfirmPasswordChange = (value) => {
+    setConfirmPassword(value);
+    if (errors.confirmPassword && value === password) {
+      setErrors(prev => { const { confirmPassword, ...rest } = prev; return rest; });
+    }
+  };
+
+  const isFormValid = () => {
+    if (username.length < 3) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return false;
+    const strong = checkPasswordStrength(password);
+    if (!strong) return false;
+    if (password !== confirmPassword) return false;
+    return true;
+  };
+
   return (
     <div className="signup-page">
       <div className="signup-container">
@@ -114,7 +197,7 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
               type="text"
               id="username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => handleUsernameChange(e.target.value)}
               className={`form-input ${errors.username ? 'error' : ''}`}
               required
               disabled={loading}
@@ -130,7 +213,7 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
               type="email"
               id="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleEmailChange(e.target.value)}
               className={`form-input ${errors.email ? 'error' : ''}`}
               required
               disabled={loading}
@@ -146,7 +229,7 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => handlePasswordChange(e.target.value)}
               className={`form-input ${errors.password ? 'error' : ''}`}
               required
               disabled={loading}
@@ -154,6 +237,17 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
               autoComplete="new-password"
             />
             {errors.password && <span className="error-text">{errors.password}</span>}
+
+            <div className="password-requirements">
+              <small>Password must contain:</small>
+              <ul>
+                <li className={pwChecks.length ? 'passed' : 'failed'}>At least 8 characters</li>
+                <li className={pwChecks.uppercase ? 'passed' : 'failed'}>An uppercase letter (A-Z)</li>
+                <li className={pwChecks.lowercase ? 'passed' : 'failed'}>A lowercase letter (a-z)</li>
+                <li className={pwChecks.number ? 'passed' : 'failed'}>A number (0-9)</li>
+                <li className={pwChecks.special ? 'passed' : 'failed'}>A special character (e.g. !@#$%)</li>
+              </ul>
+            </div>
           </div>
 
           <div className="form-group">
@@ -162,7 +256,7 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
               type="password"
               id="confirmPassword"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => handleConfirmPasswordChange(e.target.value)}
               className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
               required
               disabled={loading}
@@ -187,7 +281,7 @@ const SignUpPage = ({ onNavigate, onSignup }) => {
           <button
             type="submit"
             className="btn btn-primary signup-btn"
-            disabled={loading}
+            disabled={loading || !isFormValid()}
           >
             {loading ? 'Creating Account...' : 'Sign Up'}
           </button>

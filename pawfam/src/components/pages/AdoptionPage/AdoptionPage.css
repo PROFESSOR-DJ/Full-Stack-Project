@@ -378,6 +378,30 @@
   background-color: #059669;
 }
 
+/* Validation and required marker styles */
+.required-asterisk {
+  color: #c00;
+  margin: 0 6px 0 8px;
+  font-weight: 700;
+}
+
+.form-error {
+  color: #c00;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+input.error, textarea.error, select.error {
+  border: 1px solid #c00;
+  box-shadow: 0 0 0 3px rgba(204,0,0,0.06);
+}
+
+.checkbox-label.important {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
 @media (max-width: 768px) {
   .adoption-page {
     padding: 1rem;

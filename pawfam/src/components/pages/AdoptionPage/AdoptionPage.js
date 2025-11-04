@@ -18,6 +18,9 @@ const AdoptionPage = ({ user }) => {
     otherPets: '',
     otherPetsDetails: ''
   });
+  const [termsAcceptedConsent, setTermsAcceptedConsent] = useState(false);
+  const [termsAcceptedCare, setTermsAcceptedCare] = useState(false);
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -158,6 +161,10 @@ const AdoptionPage = ({ user }) => {
       return;
     }
 
+    // Final client-side validation before submit
+    const isValid = validateAdoptionForm();
+    if (!isValid) return;
+
     setLoading(true);
 
     try {
@@ -239,6 +246,78 @@ const AdoptionPage = ({ user }) => {
       ...prev,
       [name]: value
     }));
+    // clear field-level error when user edits
+    setErrors(prev => {
+      if (!prev || !prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const validateAdoptionForm = () => {
+    const nextErrors = {};
+    // Required fields
+    const required = ['fullName', 'phone', 'email', 'address', 'experience', 'visitDate', 'visitTime'];
+    for (let key of required) {
+      const v = adoptionData[key];
+      if (!v || (typeof v === 'string' && !v.trim())) {
+        nextErrors[key] = 'This field is required';
+      }
+    }
+
+    // If the user said they have other pets, require details
+    if (adoptionData.otherPets === 'yes' && (!adoptionData.otherPetsDetails || !adoptionData.otherPetsDetails.trim())) {
+      nextErrors.otherPetsDetails = 'Please describe your other pets';
+    }
+
+    // Basic phone validation (digits only, at least 10 digits)
+    const phoneDigits = (adoptionData.phone || '').replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      nextErrors.phone = 'Enter a valid phone number (at least 10 digits)';
+    }
+
+    // Basic email validation
+    const email = (adoptionData.email || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      nextErrors.email = 'Enter a valid email address';
+    }
+
+    // Both terms checkboxes required
+    if (!termsAcceptedConsent) nextErrors.termsAcceptedConsent = 'Please acknowledge application terms';
+    if (!termsAcceptedCare) nextErrors.termsAcceptedCare = 'Please agree to provide a safe environment';
+
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      // focus first invalid field if present
+      const order = ['fullName', 'phone', 'email', 'address', 'experience', 'visitDate', 'visitTime', 'otherPetsDetails', 'termsAcceptedConsent'];
+      const firstKey = order.find(k => nextErrors[k]);
+      if (firstKey) {
+        // find input by name
+        const el = document.querySelector(`[name="${firstKey}"]`);
+        if (el && typeof el.focus === 'function') el.focus();
+      }
+      return false;
+    }
+
+    return true;
+  };
+
+  const isSubmitEnabled = () => {
+    // Mirror validateAdoptionForm but without alerts so UI can use it
+    const required = ['fullName', 'phone', 'email', 'address', 'experience', 'visitDate', 'visitTime'];
+    for (let key of required) {
+      const v = adoptionData[key];
+      if (!v || (typeof v === 'string' && !v.trim())) return false;
+    }
+    if (adoptionData.otherPets === 'yes' && (!adoptionData.otherPetsDetails || !adoptionData.otherPetsDetails.trim())) return false;
+    const phoneDigits = (adoptionData.phone || '').replace(/\D/g, '');
+    if (phoneDigits.length < 10) return false;
+    const email = (adoptionData.email || '').trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return false;
+    if (!termsAcceptedConsent || !termsAcceptedCare) return false;
+    return true;
   };
 
   return (
@@ -392,7 +471,10 @@ const AdoptionPage = ({ user }) => {
                       onChange={handleInputChange}
                       required
                       disabled={loading}
+                      className={errors.fullName ? 'error' : ''}
+                      style={errors.fullName ? { borderColor: '#c00' } : undefined}
                     />
+                    {errors.fullName && <div className="form-error">{errors.fullName}</div>}
                   </div>
                   <div className="form-group">
                     <label>Phone Number *</label>
@@ -403,7 +485,10 @@ const AdoptionPage = ({ user }) => {
                       onChange={handleInputChange}
                       required
                       disabled={loading}
+                      className={errors.phone ? 'error' : ''}
+                      style={errors.phone ? { borderColor: '#c00' } : undefined}
                     />
+                    {errors.phone && <div className="form-error">{errors.phone}</div>}
                   </div>
                 </div>
                 <div className="form-group">
@@ -415,7 +500,10 @@ const AdoptionPage = ({ user }) => {
                     onChange={handleInputChange}
                     required
                     disabled={loading}
+                    className={errors.email ? 'error' : ''}
+                    style={errors.email ? { borderColor: '#c00' } : undefined}
                   />
+                  {errors.email && <div className="form-error">{errors.email}</div>}
                 </div>
                 <div className="form-group">
                   <label>Home Address *</label>
@@ -426,7 +514,10 @@ const AdoptionPage = ({ user }) => {
                     rows="3"
                     required
                     disabled={loading}
+                    className={errors.address ? 'error' : ''}
+                    style={errors.address ? { borderColor: '#c00' } : undefined}
                   />
+                  {errors.address && <div className="form-error">{errors.address}</div>}
                 </div>
               </div>
 
@@ -440,6 +531,8 @@ const AdoptionPage = ({ user }) => {
                     onChange={handleInputChange}
                     required
                     disabled={loading}
+                    className={errors.experience ? 'error' : ''}
+                    style={errors.experience ? { borderColor: '#c00' } : undefined}
                   >
                     <option value="">Select Experience</option>
                     <option value="first-time">First-time pet owner</option>
@@ -473,6 +566,8 @@ const AdoptionPage = ({ user }) => {
                       onChange={handleInputChange}
                       required
                       disabled={loading}
+                      className={errors.visitDate ? 'error' : ''}
+                      style={errors.visitDate ? { borderColor: '#c00' } : undefined}
                     />
                   </div>
                   <div className="form-group">
@@ -483,6 +578,8 @@ const AdoptionPage = ({ user }) => {
                       onChange={handleInputChange}
                       required
                       disabled={loading}
+                        className={errors.visitTime ? 'error' : ''}
+                        style={errors.visitTime ? { borderColor: '#c00' } : undefined}
                     >
                       <option value="">Select Time</option>
                       <option value="09:00">9:00 AM</option>
@@ -513,9 +610,11 @@ const AdoptionPage = ({ user }) => {
                   <label>Do you have other pets at home?</label>
                   <select
                     name="otherPets"
-                    value={adoptionData.otherPets}
-                    onChange={handleInputChange}
-                    disabled={loading}
+                      value={adoptionData.otherPets}
+                      onChange={handleInputChange}
+                      disabled={loading}
+                      className={errors.otherPets ? 'error' : ''}
+                      style={errors.otherPets ? { borderColor: '#c00' } : undefined}
                   >
                     <option value="">Select Option</option>
                     <option value="yes">Yes</option>
@@ -532,34 +631,51 @@ const AdoptionPage = ({ user }) => {
                       rows="2"
                       placeholder="Types, breeds, ages of your other pets..."
                       disabled={loading}
+                      className={errors.otherPetsDetails ? 'error' : ''}
+                      style={errors.otherPetsDetails ? { borderColor: '#c00' } : undefined}
                     />
+                    {errors.otherPetsDetails && <div className="form-error">{errors.otherPetsDetails}</div>}
                   </div>
                 )}
               </div>
 
               <div className="form-agreement">
-                <label className="checkbox-label">
+                <label className={`checkbox-label important ${errors.termsAcceptedConsent ? 'error' : ''}`}>
                   <input
                     type="checkbox"
-                    required
+                    name="termsAcceptedConsent"
+                    checked={termsAcceptedConsent}
+                    onChange={(e) => { setTermsAcceptedConsent(e.target.checked); setErrors(prev => { const next = { ...prev }; delete next.termsAcceptedConsent; return next; }); }}
                     disabled={loading}
+                    aria-required="true"
+                    className={errors.termsAcceptedConsent ? 'error' : ''}
                   />
+                  <span className="required-asterisk" aria-hidden="true">*</span>
                   I understand that this is an adoption application and approval is subject to shelter review and home visit
                 </label>
-                <label className="checkbox-label">
+                {errors.termsAcceptedConsent && <div className="form-error">{errors.termsAcceptedConsent}</div>}
+
+                <label className={`checkbox-label important ${errors.termsAcceptedCare ? 'error' : ''}`} style={{ marginTop: '0.5rem' }}>
                   <input
                     type="checkbox"
-                    required
+                    name="termsAcceptedCare"
+                    checked={termsAcceptedCare}
+                    onChange={(e) => { setTermsAcceptedCare(e.target.checked); setErrors(prev => { const next = { ...prev }; delete next.termsAcceptedCare; return next; }); }}
                     disabled={loading}
+                    aria-required="true"
+                    className={errors.termsAcceptedCare ? 'error' : ''}
                   />
+                  <span className="required-asterisk" aria-hidden="true">*</span>
                   I agree to provide a loving and safe environment for the pet
                 </label>
+                {errors.termsAcceptedCare && <div className="form-error">{errors.termsAcceptedCare}</div>}
               </div>
 
               <button
                 type="submit"
                 className="submit-application-btn"
-                disabled={loading}
+                disabled={loading || !isSubmitEnabled()}
+                title={!isSubmitEnabled() ? 'Complete all required fields and accept terms to enable' : ''}
               >
                 {loading ? 'Submitting...' : 'Submit Adoption Application'}
               </button>

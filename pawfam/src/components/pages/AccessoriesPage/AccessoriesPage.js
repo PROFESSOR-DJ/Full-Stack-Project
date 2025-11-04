@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../../../context/CartContext';
-import { productsAPI, vendorAccessoriesAPI } from '../../../services/api';
+import { productsAPI, vendorAccessoriesAPI, profileAPI } from '../../../services/api';
 import './AccessoriesPage.css';
 
 // India states list
@@ -298,8 +298,20 @@ const AccessoriesPage = ({ user }) => {
         totalAmount: Number(getCartTotal())
       };
 
-      // log payload to help debugging in dev (will show masked card digits if needed)
-      console.log('Order payload (to be sent):', orderPayload);
+      // Mask sensitive info in logs: only show last 4 digits of card if present
+      try {
+        const masked = { ...orderPayload };
+        if (masked.paymentInfo && masked.paymentInfo.cardNumber) {
+          const digits = masked.paymentInfo.cardNumber.toString();
+          const last4 = digits.slice(-4);
+          masked.paymentInfo.cardNumber = '****' + last4;
+          // never log CVV
+          if (masked.paymentInfo.cvv) masked.paymentInfo.cvv = '***';
+        }
+        console.log('Order payload (masked):', masked);
+      } catch (e) {
+        console.log('Order payload prepared');
+      }
 
       await productsAPI.createOrder(orderPayload);
 
@@ -369,6 +381,59 @@ const AccessoriesPage = ({ user }) => {
     }
 
     setLoading(false);
+  };
+
+  // Open checkout and prefill from profile/user when possible
+  const openCheckout = async () => {
+    // If not logged in, prompt
+    if (!user) {
+      alert('Please login to continue to checkout');
+      return;
+    }
+
+    // Start with defaults but prefill known user/profile fields
+    const prefill = {
+      fullName: user?.username || '',
+      email: user?.email || '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      paymentMethod: 'card',
+      cardNumber: '', // never prefill sensitive fields
+      expiryDate: '',
+      cvv: '',
+      upiId: '',
+      deliveryDate: checkoutData.deliveryDate || today,
+      deliveryTime: checkoutData.deliveryTime || '17:30',
+      extras: checkoutData.extras || { giftWrap: false, includeReceipt: false },
+      priorityDelivery: checkoutData.priorityDelivery || false
+    };
+
+    // Try to fetch profile details (non-sensitive) to fill address fields; fail silently
+    try {
+      const profileResp = await profileAPI.getProfile();
+      // profileResp may have { profile } or direct fields depending on API design
+      const profile = profileResp?.profile || profileResp || {};
+      if (profile) {
+        if (profile.name) prefill.fullName = profile.name;
+        // Prefer residentialAddress (user profile) and fall back to communicationAddress (vendor shape)
+        if (profile.residentialAddress) prefill.address = profile.residentialAddress;
+        else if (profile.communicationAddress) prefill.address = profile.communicationAddress;
+        if (profile.city) prefill.city = profile.city;
+        if (profile.state) prefill.state = profile.state || prefill.state;
+        if (profile.zipCode) prefill.zipCode = profile.zipCode;
+        if (profile.email) prefill.email = profile.email;
+      }
+    } catch (err) {
+      // ignore profile fetch errors; we'll still open the checkout with user info
+      console.debug('Could not fetch profile to prefill checkout:', err?.message || err);
+    }
+
+    // Apply prefill and open modal
+    setCheckoutData(prev => ({ ...prev, ...prefill }));
+    setShowCart(false);
+    setShowCheckout(true);
   };
 
   const handleInputChange = (e) => {
@@ -652,10 +717,7 @@ const AccessoriesPage = ({ user }) => {
               </div>
               <button
                 className="checkout-btn"
-                onClick={() => {
-                  setShowCart(false);
-                  setShowCheckout(true);
-                }}
+                onClick={openCheckout}
                 disabled={loading}
               >
                 Proceed to Checkout
@@ -895,6 +957,9 @@ const AccessoriesPage = ({ user }) => {
                         value={checkoutData.cardNumber}
                         onChange={handleInputChange}
                         placeholder="1234 5678 9012 3456"
+                        inputMode="numeric"
+                        autoComplete="cc-number"
+                        maxLength={19}
                         required
                         disabled={loading}
                       />
@@ -909,6 +974,9 @@ const AccessoriesPage = ({ user }) => {
                           value={checkoutData.expiryDate}
                           onChange={handleInputChange}
                           placeholder="MM/YY"
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                          maxLength={5}
                           required
                           disabled={loading}
                         />
@@ -917,11 +985,14 @@ const AccessoriesPage = ({ user }) => {
                       <div className="form-group">
                         <label>CVV *</label>
                         <input
-                          type="text"
+                          type="password"
                           name="cvv"
                           value={checkoutData.cvv}
                           onChange={handleInputChange}
                           placeholder="123"
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                          maxLength={3}
                           required
                           disabled={loading}
                         />
