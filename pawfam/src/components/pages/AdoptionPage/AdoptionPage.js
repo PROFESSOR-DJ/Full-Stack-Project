@@ -53,37 +53,7 @@ const AdoptionPage = ({ user }) => {
     }
   };
 
-  // Default/mock pets (fallback until vendor posts load)
-  const initialPets = [
-    {
-      id: 1,
-      name: 'Buddy',
-      type: 'Dog',
-      breed: 'Golden Retriever',
-      age: '2 years',
-      gender: 'Male',
-      size: 'Large',
-      description: 'Friendly and energetic golden retriever looking for a loving home. Great with kids and other pets.',
-      image: 'https://placehold.co/300x300/f59e0b/ffffff?text=Buddy',
-      status: 'Available',
-      shelter: 'Happy Paws Shelter'
-    },
-    {
-      id: 2,
-      name: 'Luna',
-      type: 'Cat',
-      breed: 'Siamese',
-      age: '1.5 years',
-      gender: 'Female',
-      size: 'Small',
-      description: 'Gentle and affectionate Siamese cat. Loves cuddles and quiet environments.',
-      image: 'https://placehold.co/300x300/3b82f6/ffffff?text=Luna',
-      status: 'Available',
-      shelter: 'Cat Rescue Center'
-    }
-  ];
-
-  const [petsList, setPetsList] = useState(initialPets);
+  const [petsList, setPetsList] = useState([]);
   const [petsLoading, setPetsLoading] = useState(false);
   const [petsError, setPetsError] = useState(null);
 
@@ -95,7 +65,7 @@ const AdoptionPage = ({ user }) => {
       try {
         const resp = await vendorAdoptionAPI.getPets();
         if (!mounted) return;
-        if (Array.isArray(resp) && resp.length) {
+        if (Array.isArray(resp)) {
           const mapped = resp.map(p => {
             // normalize shelter/vendor info to a string for safe rendering
             let shelterStr = '';
@@ -123,6 +93,9 @@ const AdoptionPage = ({ user }) => {
             };
           });
           setPetsList(mapped);
+        } else {
+          // no pets or unexpected response shape -> clear list
+          setPetsList([]);
         }
       } catch (err) {
         console.error('Error fetching vendor adoption pets:', err);
@@ -385,15 +358,18 @@ const AdoptionPage = ({ user }) => {
         </div>
       </div>
 
-      <div className="pets-grid">
-        {filteredPets.length === 0 ? (
-          <div className="no-results">
-            <p>No pets found matching "{debouncedSearch}"</p>
-            <button onClick={() => setSearchKeyword('')}>Clear Search</button>
-          </div>
-        ) : (
-          filteredPets.map(pet => (
-            <div key={pet.id} className="pet-card">
+      {petsLoading ? (
+            <div className="loading-spinner">Loading pets...</div>
+          ) : (
+            <div className="pets-grid">
+              {filteredPets.length === 0 ? (
+                <div className="no-results">
+                  <p>No pets found {debouncedSearch && `matching "${debouncedSearch}"`}</p>
+                  {debouncedSearch && <button onClick={() => setSearchKeyword('')}>Clear Search</button>}
+                </div>
+              ) : (
+                filteredPets.map(pet => (
+                  <div key={pet.id} className="pet-card">
               <div className="pet-image">
                 <img src={pet.image} alt={pet.name} />
                 <div className="pet-status">{pet.status}</div>
@@ -430,9 +406,10 @@ const AdoptionPage = ({ user }) => {
                 </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Adoption Form Modal */}
       {showAdoptionForm && selectedPet && (

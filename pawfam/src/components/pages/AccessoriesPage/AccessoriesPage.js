@@ -86,47 +86,7 @@ const AccessoriesPage = ({ user }) => {
     return () => clearTimeout(timer);
   }, [searchKeyword]);
 
-  // Default/mock products (kept as fallback until vendor posts are loaded)
-  const initialProducts = [
-    {
-      id: 1,
-      name: 'Premium Dog Food',
-      category: 'food',
-      price: 45.99,
-      rating: 4.5,
-      image: 'https://placehold.co/300x300/ef4444/ffffff?text=Dog+Food',
-      description: 'High-quality premium dog food with all essential nutrients'
-    },
-    {
-      id: 2,
-      name: 'Cat Grooming Brush',
-      category: 'grooming',
-      price: 15.99,
-      rating: 4.2,
-      image: 'https://placehold.co/300x300/3b82f6/ffffff?text=Grooming+Brush',
-      description: 'Gentle brush for cat grooming and fur maintenance'
-    },
-    {
-      id: 3,
-      name: 'Pet Carrier Bag',
-      category: 'accessories',
-      price: 35.99,
-      rating: 4.7,
-      image: 'https://placehold.co/300x300/10b981/ffffff?text=Pet+Carrier',
-      description: 'Comfortable and secure pet carrier for travel'
-    },
-    {
-      id: 4,
-      name: 'Dog Chew Toys',
-      category: 'toys',
-      price: 12.99,
-      rating: 4.3,
-      image: 'https://placehold.co/300x300/f59e0b/ffffff?text=Chew+Toys',
-      description: 'Durable chew toys for dental health and entertainment'
-    }
-  ];
-
-  const [productsList, setProductsList] = useState(initialProducts);
+  const [productsList, setProductsList] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState(null);
 
@@ -139,7 +99,7 @@ const AccessoriesPage = ({ user }) => {
         const resp = await vendorAccessoriesAPI.getProducts();
         // Expect resp to be an array; map defensively
         if (!mounted) return;
-        if (Array.isArray(resp) && resp.length) {
+        if (Array.isArray(resp)) {
           const mapped = resp.map(p => ({
             id: p._id || p.id || Math.random(),
             name: p.name || p.title || 'Untitled Product',
@@ -150,6 +110,9 @@ const AccessoriesPage = ({ user }) => {
             description: p.description || p.details || ''
           }));
           setProductsList(mapped);
+        } else {
+          // if response is not an array, clear list to avoid showing stale mock data
+          setProductsList([]);
         }
       } catch (err) {
         console.error('Error fetching vendor accessories:', err);
@@ -592,18 +555,18 @@ const AccessoriesPage = ({ user }) => {
         </button>
       </div>
 
-      <div className="products-grid">
-        {filteredProducts.length === 0 ? (
-          <div className="no-results">
-            <p>No products found matching your criteria</p>
-            <button onClick={() => {
-              setSearchKeyword('');
-              setSelectedCategory('all');
-            }}>Clear Filters</button>
-          </div>
-        ) : (
-          filteredProducts.map(product => (
-            <div key={product.id} className="product-card">
+      {productsLoading ? (
+        <div className="loading-spinner">Loading products...</div>
+      ) : (
+        <div className="products-grid">
+          {filteredProducts.length === 0 ? (
+            <div className="no-results">
+              <p>No products found {debouncedSearch && `matching "${debouncedSearch}"`}</p>
+              {debouncedSearch && <button onClick={() => setSearchKeyword('')}>Clear Search</button>}
+            </div>
+          ) : (
+            filteredProducts.map(product => (
+              <div key={product.id} className="product-card">
               <div className="product-image">
                 <img src={product.image} alt={product.name} />
               </div>
@@ -656,9 +619,10 @@ const AccessoriesPage = ({ user }) => {
                 </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* Shopping Cart Sidebar */}
       {showCart && (
