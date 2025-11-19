@@ -227,7 +227,7 @@ const BookingsPage = ({ user }) => {
 
     try {
       setLoading(true);
-      await daycareAPI.cancelBooking(bookingId);
+      // Simply delete the booking - no need to cancel first
       await daycareAPI.deleteBooking(bookingId);
       alert('Booking deleted successfully!');
       await fetchAllBookings();
@@ -263,7 +263,7 @@ const BookingsPage = ({ user }) => {
     // clear or set inline validation for ZIP as user types
     if (name === 'zipCode') {
       setAddressErrors(prev => {
-           const next = { ...prev };
+        const next = { ...prev };
         if (!value || !/^\d{6}$/.test(value)) next.zipCode = 'ZIP Code must be exactly 6 digits';
         else delete next.zipCode;
         return next;

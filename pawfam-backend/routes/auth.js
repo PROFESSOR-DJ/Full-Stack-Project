@@ -238,7 +238,118 @@ router.post('/vendor/login', async (req, res) => {
   }
 });
 
-// Forgot password
+// Generate random 6-digit alphanumeric OTP
+const generateOTP = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let otp = '';
+  for (let i = 0; i < 6; i++) {
+    otp += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return otp;
+};
+
+// Send password reset OTP
+router.post('/send-reset-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Please provide email address' });
+    }
+
+    // Find user (works for both customer and vendor)
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with this email address' });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+
+    // Save OTP to user (expires in 10 minutes)
+    user.resetPasswordOTP = otp;
+    user.resetPasswordOTPExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    // Send OTP via email
+    const emailService = require('../services/emailService');
+    await emailService.sendOTPEmail(email, otp);
+
+    res.json({
+      message: 'OTP has been sent to your email address',
+      email: email
+    });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({
+      message: 'Failed to send OTP. Please try again later.',
+      error: error.message
+    });
+  }
+});
+
+// Verify OTP and send password
+router.post('/verify-reset-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Please provide email and OTP' });
+    }
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if OTP exists and is not expired
+    if (!user.resetPasswordOTP || !user.resetPasswordOTPExpires) {
+      return res.status(400).json({ message: 'No OTP found. Please request a new OTP.' });
+    }
+
+    if (Date.now() > user.resetPasswordOTPExpires) {
+      return res.status(400).json({ message: 'OTP has expired. Please request a new OTP.' });
+    }
+
+    // Verify OTP (case-insensitive)
+    if (user.resetPasswordOTP.toUpperCase() !== otp.toUpperCase()) {
+      return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+    }
+
+    // OTP is valid - Send the current password via email
+    // Note: As per requirements, we're sending the password that user created
+    // In production, passwords are hashed and cannot be retrieved
+    // This implementation assumes we need to send user's original password
+
+    // Since password is hashed, we'll generate a temporary password and send it
+    // User should change it after logging in
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
+
+    // Update user's password
+    user.password = tempPassword;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordOTPExpires = undefined;
+    await user.save();
+
+    // Send password email
+    const emailService = require('../services/emailService');
+    await emailService.sendPasswordEmail(email, tempPassword, user.username);
+
+    res.json({
+      message: 'OTP verified successfully. A temporary password has been sent to your email address. Please change it after logging in.',
+      verified: true
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({
+      message: 'Failed to verify OTP. Please try again.',
+      error: error.message
+    });
+  }
+});
+
+// Forgot password (legacy endpoint - kept for compatibility)
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -248,10 +359,8 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // In a real application, you would send an email with a reset link
-    // For now, we'll just return a success message
     res.json({
-      message: 'Password reset instructions have been sent to your email'
+      message: 'Please use the new OTP-based password reset feature'
     });
   } catch (error) {
     console.error('Forgot password error:', error);
