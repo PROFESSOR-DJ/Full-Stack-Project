@@ -3,37 +3,59 @@ const nodemailer = require('nodemailer');
 // Create transporter
 const createTransporter = () => {
     return nodemailer.createTransport({
-        service: 'gmail', // You can use other services like 'outlook', 'yahoo', etc.
+        service: 'gmail',
         auth: {
-            user: process.env.EMAIL_USER, // Your email address
-            pass: process.env.EMAIL_PASSWORD // Your email password or app-specific password
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
         }
     });
 };
 
-// Send OTP email
-const sendOTPEmail = async (email, otp) => {
+// Send OTP email - UPDATED with username parameter
+const sendOTPEmail = async (email, otp, username = 'User') => {
     try {
         const transporter = createTransporter();
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
-            subject: 'PawFam - Password Reset OTP',
+            subject: '🔐 PawFam - Password Reset OTP',
             html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1e40af;">PawFam Password Reset</h2>
-          <p>Hello,</p>
-          <p>You have requested to reset your password. Please use the following OTP to verify your identity:</p>
-          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <h1 style="color: #1e40af; letter-spacing: 8px; margin: 0;">${otp}</h1>
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f9fafb; border-radius: 10px;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="color: #1e40af; margin: 0;">🐾 PawFam</h1>
+            </div>
+            
+            <h2 style="color: #1e40af; margin-bottom: 10px;">Password Reset Request</h2>
+            <p style="color: #4b5563; font-size: 16px;">Hello ${username},</p>
+            <p style="color: #4b5563; font-size: 16px;">
+              We received a request to reset your password. Please use the following OTP to verify your identity:
+            </p>
+            
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
+              <h1 style="color: white; letter-spacing: 12px; margin: 0; font-size: 36px; font-weight: bold;">${otp}</h1>
+            </div>
+            
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+              <p style="margin: 0; color: #92400e; font-size: 14px;">
+                ⚠️ <strong>Important:</strong> This OTP will expire in 10 minutes.
+              </p>
+            </div>
+            
+            <p style="color: #4b5563; font-size: 14px;">
+              If you did not request this password reset, please ignore this email or contact support if you have concerns.
+            </p>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 12px; margin: 5px 0;">
+                This is an automated email from PawFam. Please do not reply to this email.
+              </p>
+              <p style="color: #6b7280; font-size: 12px; margin: 5px 0;">
+                © 2025 PawFam. All rights reserved.
+              </p>
+            </div>
           </div>
-          <p>This OTP will expire in 10 minutes.</p>
-          <p>If you did not request this password reset, please ignore this email.</p>
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 12px;">
-            This is an automated email from PawFam. Please do not reply to this email.
-          </p>
         </div>
       `
         };
@@ -47,7 +69,75 @@ const sendOTPEmail = async (email, otp) => {
     }
 };
 
-// Send password email
+// Send password reset confirmation email - NEW
+const sendPasswordResetConfirmation = async (email, username = 'User') => {
+    try {
+        const transporter = createTransporter();
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: '✅ PawFam - Password Reset Successful',
+            html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f9fafb; border-radius: 10px;">
+          <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="color: #1e40af; margin: 0;">🐾 PawFam</h1>
+            </div>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+              <div style="background-color: #d1fae5; width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
+                <span style="color: #059669; font-size: 48px;">✓</span>
+              </div>
+            </div>
+            
+            <h2 style="color: #059669; text-align: center; margin-bottom: 10px;">Password Reset Successful!</h2>
+            <p style="color: #4b5563; font-size: 16px;">Hello ${username},</p>
+            <p style="color: #4b5563; font-size: 16px;">
+              Your password has been successfully reset. You can now login to your PawFam account using your new password.
+            </p>
+            
+            <div style="background-color: #dbeafe; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                🔒 <strong>Security Tip:</strong> Keep your password secure and never share it with anyone.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="http://localhost:3000" style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">
+                Login to PawFam
+              </a>
+            </div>
+            
+            <div style="background-color: #fee2e2; padding: 15px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0;">
+              <p style="margin: 0; color: #991b1b; font-size: 14px;">
+                ⚠️ If you did not make this change, please contact support immediately.
+              </p>
+            </div>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 12px; margin: 5px 0;">
+                This is an automated email from PawFam. Please do not reply to this email.
+              </p>
+              <p style="color: #6b7280; font-size: 12px; margin: 5px 0;">
+                © 2025 PawFam. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Password reset confirmation email sent:', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Error sending password reset confirmation email:', error);
+        throw new Error('Failed to send confirmation email');
+    }
+};
+
+// Send password email - KEPT FOR BACKWARDS COMPATIBILITY
 const sendPasswordEmail = async (email, password, username) => {
     try {
         const transporter = createTransporter();
@@ -90,5 +180,6 @@ const sendPasswordEmail = async (email, password, username) => {
 
 module.exports = {
     sendOTPEmail,
-    sendPasswordEmail
+    sendPasswordEmail,
+    sendPasswordResetConfirmation
 };

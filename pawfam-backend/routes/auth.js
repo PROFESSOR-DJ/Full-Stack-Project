@@ -9,14 +9,12 @@ router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Validate input
     if (!username || !email || !password) {
       return res.status(400).json({
         message: 'Please provide username, email, and password'
       });
     }
 
-    // Check if user exists with email
     const existingEmail = await User.findOne({ email: email.toLowerCase() });
     if (existingEmail) {
       return res.status(400).json({
@@ -24,7 +22,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check if user exists with username
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
       return res.status(400).json({
@@ -32,7 +29,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Create new user (password will be hashed by the User model pre-save hook)
     const user = new User({
       username,
       email: email.toLowerCase(),
@@ -42,7 +38,6 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Generate token
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -62,7 +57,6 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     console.error('Registration error:', error);
 
-    // Handle MongoDB duplicate key error
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
@@ -79,14 +73,12 @@ router.post('/vendor/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Validate input
     if (!username || !email || !password) {
       return res.status(400).json({
         message: 'Please provide username, email, and password'
       });
     }
 
-    // Check if user exists with email
     const existingEmail = await User.findOne({ email: email.toLowerCase() });
     if (existingEmail) {
       return res.status(400).json({
@@ -94,7 +86,6 @@ router.post('/vendor/register', async (req, res) => {
       });
     }
 
-    // Check if user exists with username
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
       return res.status(400).json({
@@ -102,7 +93,6 @@ router.post('/vendor/register', async (req, res) => {
       });
     }
 
-    // Create new vendor
     const vendor = new User({
       username,
       email: email.toLowerCase(),
@@ -112,7 +102,6 @@ router.post('/vendor/register', async (req, res) => {
 
     await vendor.save();
 
-    // Generate token
     const token = jwt.sign(
       { userId: vendor._id, role: vendor.role },
       process.env.JWT_SECRET,
@@ -132,7 +121,6 @@ router.post('/vendor/register', async (req, res) => {
   } catch (error) {
     console.error('Vendor registration error:', error);
 
-    // Handle MongoDB duplicate key error
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
       return res.status(400).json({
@@ -149,24 +137,20 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    // Find user (case-insensitive email)
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate token
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -194,12 +178,10 @@ router.post('/vendor/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    // Find vendor (case-insensitive email and role check)
     const vendor = await User.findOne({
       email: email.toLowerCase(),
       role: 'vendor'
@@ -209,13 +191,11 @@ router.post('/vendor/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials or not a vendor account' });
     }
 
-    // Check password
     const isMatch = await vendor.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate token
     const token = jwt.sign(
       { userId: vendor._id, role: vendor.role },
       process.env.JWT_SECRET,
@@ -248,7 +228,7 @@ const generateOTP = () => {
   return otp;
 };
 
-// Send password reset OTP
+// Send password reset OTP - WORKS FOR BOTH USERS AND VENDORS
 router.post('/send-reset-otp', async (req, res) => {
   try {
     const { email } = req.body;
@@ -273,7 +253,7 @@ router.post('/send-reset-otp', async (req, res) => {
 
     // Send OTP via email
     const emailService = require('../services/emailService');
-    await emailService.sendOTPEmail(email, otp);
+    await emailService.sendOTPEmail(email, otp, user.username);
 
     res.json({
       message: 'OTP has been sent to your email address',
@@ -288,7 +268,7 @@ router.post('/send-reset-otp', async (req, res) => {
   }
 });
 
-// Verify OTP and send password
+// Verify OTP - UPDATED TO JUST VERIFY, NOT SEND PASSWORD
 router.post('/verify-reset-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -317,27 +297,9 @@ router.post('/verify-reset-otp', async (req, res) => {
       return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
     }
 
-    // OTP is valid - Send the current password via email
-    // Note: As per requirements, we're sending the password that user created
-    // In production, passwords are hashed and cannot be retrieved
-    // This implementation assumes we need to send user's original password
-
-    // Since password is hashed, we'll generate a temporary password and send it
-    // User should change it after logging in
-    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
-
-    // Update user's password
-    user.password = tempPassword;
-    user.resetPasswordOTP = undefined;
-    user.resetPasswordOTPExpires = undefined;
-    await user.save();
-
-    // Send password email
-    const emailService = require('../services/emailService');
-    await emailService.sendPasswordEmail(email, tempPassword, user.username);
-
+    // OTP is valid - return success
     res.json({
-      message: 'OTP verified successfully. A temporary password has been sent to your email address. Please change it after logging in.',
+      message: 'OTP verified successfully. You can now reset your password.',
       verified: true
     });
   } catch (error) {
@@ -349,22 +311,63 @@ router.post('/verify-reset-otp', async (req, res) => {
   }
 });
 
-// Forgot password (legacy endpoint - kept for compatibility)
-router.post('/forgot-password', async (req, res) => {
+// NEW ENDPOINT: Reset password with OTP
+router.post('/reset-password', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, otp, newPassword } = req.body;
 
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ 
+        message: 'Please provide email, OTP, and new password' 
+      });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ 
+        message: 'Password must be at least 8 characters long' 
+      });
+    }
+
+    // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Verify OTP
+    if (!user.resetPasswordOTP || !user.resetPasswordOTPExpires) {
+      return res.status(400).json({ message: 'No OTP found. Please request a new OTP.' });
+    }
+
+    if (Date.now() > user.resetPasswordOTPExpires) {
+      return res.status(400).json({ message: 'OTP has expired. Please request a new OTP.' });
+    }
+
+    if (user.resetPasswordOTP.toUpperCase() !== otp.toUpperCase()) {
+      return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordOTPExpires = undefined;
+    await user.save();
+
+    // Send confirmation email
+    const emailService = require('../services/emailService');
+    await emailService.sendPasswordResetConfirmation(email, user.username);
+
     res.json({
-      message: 'Please use the new OTP-based password reset feature'
+      message: 'Password has been reset successfully. You can now login with your new password.',
+      success: true
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      message: 'Failed to reset password. Please try again.',
+      error: error.message
+    });
   }
 });
 
