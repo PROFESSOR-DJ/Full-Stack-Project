@@ -51,7 +51,9 @@ const ForgotPasswordPage = ({ onNavigate }) => {
     setErrors({});
     
     try {
-      await authAPI.sendPasswordResetOTP(email);
+      const response = await authAPI.sendPasswordResetOTP(email);
+      console.log('OTP sent successfully:', response);
+      
       setStep(2);
       setCountdown(600); // 10 minutes countdown
       setModalContent({
@@ -71,6 +73,7 @@ const ForgotPasswordPage = ({ onNavigate }) => {
         });
       }, 1000);
     } catch (error) {
+      console.error('Send OTP error:', error);
       setErrors({ 
         submit: error.response?.data?.message || 'Failed to send OTP. Please try again.' 
       });
@@ -92,16 +95,18 @@ const ForgotPasswordPage = ({ onNavigate }) => {
     
     try {
       const response = await authAPI.verifyPasswordResetOTP(email, otp);
+      console.log('OTP verification response:', response);
       
       if (response.verified) {
         setStep(3);
         setModalContent({
           title: 'OTP Verified',
-          message: 'Please enter your new password.'
+          message: 'OTP verified successfully! Please enter your new password.'
         });
         setIsModalOpen(true);
       }
     } catch (error) {
+      console.error('Verify OTP error:', error);
       setErrors({ 
         otp: error.response?.data?.message || 'Invalid or expired OTP. Please try again.' 
       });
@@ -129,14 +134,25 @@ const ForgotPasswordPage = ({ onNavigate }) => {
     setErrors({});
 
     try {
-      await authAPI.resetPassword(email, otp, newPassword);
-      setStep(4);
-      setModalContent({
-        title: 'Password Reset Successfully',
-        message: 'Your password has been reset. You can now login with your new password.'
-      });
-      setIsModalOpen(true);
+      console.log('Resetting password with:', { email, otp, newPassword: '***' });
+      
+      const response = await authAPI.resetPassword(email, otp, newPassword);
+      console.log('Password reset response:', response);
+      
+      if (response.success) {
+        setStep(4);
+        setModalContent({
+          title: 'Password Reset Successfully',
+          message: 'Your password has been reset successfully. You can now login with your new password.'
+        });
+        setIsModalOpen(true);
+      } else {
+        setErrors({
+          submit: response.message || 'Failed to reset password. Please try again.'
+        });
+      }
     } catch (error) {
+      console.error('Reset password error:', error);
       setErrors({
         submit: error.response?.data?.message || 'Failed to reset password. Please try again.'
       });

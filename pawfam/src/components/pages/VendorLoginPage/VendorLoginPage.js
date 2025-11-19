@@ -28,7 +28,7 @@ const VendorLoginPage = ({ onNavigate, onLogin }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        e.stopPropagation(); // Stop event bubbling
+        e.stopPropagation();
 
         // Prevent double submission
         if (isSubmitting.current || loading) {
@@ -47,7 +47,6 @@ const VendorLoginPage = ({ onNavigate, onLogin }) => {
         try {
             console.log('Submitting vendor login for:', email);
 
-            // Call API - authAPI.vendorLogin returns response.data directly
             const data = await authAPI.vendorLogin({
                 email,
                 password
@@ -55,21 +54,16 @@ const VendorLoginPage = ({ onNavigate, onLogin }) => {
 
             console.log('Vendor login successful:', data);
 
-            // Store token and user info
             if (data.token) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
             }
 
-            // DO NOT show alert - causes issues with navigation
             console.log('Vendor logged in successfully');
 
-            // Call parent handler ONLY if provided (pass the data, not credentials)
             if (onLogin) {
-                // Pass the response data, not the credentials
                 await onLogin(data);
             } else {
-                // If no parent handler, navigate to home/dashboard
                 if (onNavigate) {
                     onNavigate('landing');
                 }
@@ -78,7 +72,6 @@ const VendorLoginPage = ({ onNavigate, onLogin }) => {
         } catch (error) {
             console.error('Vendor login error:', error);
 
-            // Extract error message from response
             const errorMessage = error.response?.data?.message
                 || error.message
                 || 'Vendor login failed. Please check your credentials.';
@@ -154,6 +147,20 @@ const VendorLoginPage = ({ onNavigate, onLogin }) => {
                 </form>
 
                 <div className="vendor-login-links">
+                    <p className="vendor-login-link-text">
+                        <a
+                            href="#"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (!loading) {
+                                    onNavigate('forgot');
+                                }
+                            }}
+                            className="forgot-link"
+                        >
+                            Forgot Password?
+                        </a>
+                    </p>
                     <p className="vendor-login-link-text">
                         Don't have a vendor account?{' '}
                         <a

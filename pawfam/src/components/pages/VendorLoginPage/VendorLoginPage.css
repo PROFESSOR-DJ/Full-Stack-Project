@@ -107,7 +107,8 @@
 }
 
 .signup-link,
-.customer-link {
+.customer-link,
+.forgot-link {
   color: #3b82f6;
   text-decoration: none;
   font-weight: 600;
@@ -115,7 +116,8 @@
 }
 
 .signup-link:hover,
-.customer-link:hover {
+.customer-link:hover,
+.forgot-link:hover {
   color: #2563eb;
   text-decoration: underline;
 }
