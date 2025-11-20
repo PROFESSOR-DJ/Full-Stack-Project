@@ -567,58 +567,68 @@ const AccessoriesPage = ({ user }) => {
           ) : (
             filteredProducts.map(product => (
               <div key={product.id} className="product-card">
-              <div className="product-image">
-                <img src={product.image} alt={product.name} />
+                <div className="product-image">
+                  <img 
+                    src={
+                      Array.isArray(product.images) && product.images.length > 0 
+                        ? product.images[0] 
+                        : product.image || `https://placehold.co/300x200/3b82f6/ffffff?text=${encodeURIComponent(product.name)}`
+                    } 
+                    alt={product.name}
+                    onError={(e) => {
+                      e.target.src = `https://placehold.co/300x200/3b82f6/ffffff?text=${encodeURIComponent(product.name)}`;
+                    }}
+                  />
+                </div>
+                <div className="product-info">
+                  <h3>{product.name}</h3>
+                  <p className="product-description">{product.description || 'No description provided.'}</p>
+
+                  {/* Show rating with default fallback to 4.5 if not provided or falsy */}
+                  <div className="product-rating">
+                    ⭐ {typeof product.rating === 'number' && !Number.isNaN(product.rating) && product.rating > 0 ? product.rating : 4.5}
+                  </div>
+
+                  {/* Price / discount display */}
+                  <div className="product-price">
+                    {product.discountPrice && Number(product.discountPrice) > 0 ? (
+                      <>
+                        <span className="discounted">₹{Number(product.discountPrice).toFixed(2)}</span>
+                        <small className="original">₹{Number(product.price).toFixed(2)}</small>
+                      </>
+                    ) : (
+                      <span>₹{Number(product.price || 0).toFixed(2)}</span>
+                    )}
+                  </div>
+
+                  {/* Additional product details (show only when present) */}
+                  <div className="product-meta">
+                    {product.brand && <div><strong>Brand:</strong> {product.brand}</div>}
+                    {product.petType && <div><strong>Pet Type:</strong> {product.petType}</div>}
+                    {typeof product.stock !== 'undefined' && <div><strong>Stock:</strong> {product.stock}</div>}
+                    {product.weight && <div><strong>Weight:</strong> {product.weight}</div>}
+                    {product.dimensions && product.dimensions.unit && <div><strong>Dimensions unit:</strong> {product.dimensions.unit}</div>}
+                    {product.tags && Array.isArray(product.tags) && product.tags.length > 0 && (
+                      <div className="tag-list"><strong>Tags:</strong> {product.tags.join(', ')}</div>
+                    )}
+                    {product.shippingInfo && (
+                      <div className="shipping-info">
+                        <strong>Shipping:</strong> {product.shippingInfo.freeShipping ? 'Free' : 'Paid'} • {product.shippingInfo.deliveryTime || ''}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="product-actions">
+                    <button
+                      className="add-to-cart-btn"
+                      onClick={() => addToCart(product)}
+                      disabled={!user}
+                    >
+                      {user ? 'Add to Cart' : 'Login to Purchase'}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="product-info">
-                <h3>{product.name}</h3>
-                <p className="product-description">{product.description || 'No description provided.'}</p>
-
-                {/* Show rating with default fallback to 4.5 if not provided or falsy */}
-                <div className="product-rating">
-                  ⭐ {typeof product.rating === 'number' && !Number.isNaN(product.rating) && product.rating > 0 ? product.rating : 4.5}
-                </div>
-
-                {/* Price / discount display */}
-                <div className="product-price">
-                  {product.discountPrice && Number(product.discountPrice) > 0 ? (
-                    <>
-                      <span className="discounted">₹{Number(product.discountPrice).toFixed(2)}</span>
-                      <small className="original">₹{Number(product.price).toFixed(2)}</small>
-                    </>
-                  ) : (
-                    <span>₹{Number(product.price || 0).toFixed(2)}</span>
-                  )}
-                </div>
-
-                {/* Additional product details (show only when present) */}
-                <div className="product-meta">
-                  {product.brand && <div><strong>Brand:</strong> {product.brand}</div>}
-                  {product.petType && <div><strong>Pet Type:</strong> {product.petType}</div>}
-                  {typeof product.stock !== 'undefined' && <div><strong>Stock:</strong> {product.stock}</div>}
-                  {product.weight && <div><strong>Weight:</strong> {product.weight}</div>}
-                  {product.dimensions && product.dimensions.unit && <div><strong>Dimensions unit:</strong> {product.dimensions.unit}</div>}
-                  {product.tags && Array.isArray(product.tags) && product.tags.length > 0 && (
-                    <div className="tag-list"><strong>Tags:</strong> {product.tags.join(', ')}</div>
-                  )}
-                  {product.shippingInfo && (
-                    <div className="shipping-info">
-                      <strong>Shipping:</strong> {product.shippingInfo.freeShipping ? 'Free' : 'Paid'} • {product.shippingInfo.deliveryTime || ''}
-                    </div>
-                  )}
-                </div>
-
-                <div className="product-actions">
-                  <button
-                    className="add-to-cart-btn"
-                    onClick={() => addToCart(product)}
-                    disabled={!user}
-                  >
-                    {user ? 'Add to Cart' : 'Login to Purchase'}
-                  </button>
-                </div>
-              </div>
-            </div>
             ))
           )}
         </div>

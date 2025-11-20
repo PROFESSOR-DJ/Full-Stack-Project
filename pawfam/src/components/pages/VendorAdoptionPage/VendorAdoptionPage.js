@@ -34,9 +34,12 @@ const VendorAdoptionPage = ({ user }) => {
     specialNeeds: '',
     goodWithKids: true,
     goodWithDogs: true,
-    goodWithCats: true
+    goodWithCats: true,
+    images: []
   });
   const [errors, setErrors] = useState({});
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchMyPets();
@@ -76,6 +79,55 @@ const VendorAdoptionPage = ({ user }) => {
         ? prev.temperament.filter(t => t !== temperament)
         : [...prev.temperament, temperament]
     }));
+  };
+
+  // Image upload handler
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    const reader = new FileReader();
+    
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setImagePreview(base64String);
+      setFormData(prev => ({
+        ...prev,
+        images: [base64String]
+      }));
+      setUploadingImage(false);
+    };
+
+    reader.onerror = () => {
+      alert('Error reading file');
+      setUploadingImage(false);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  // Remove image
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setFormData(prev => ({
+      ...prev,
+      images: []
+    }));
+    const fileInput = document.getElementById('imageUpload');
+    if (fileInput) fileInput.value = '';
   };
 
   const validateForm = () => {
@@ -146,7 +198,8 @@ const VendorAdoptionPage = ({ user }) => {
           kids: formData.goodWithKids,
           dogs: formData.goodWithDogs,
           cats: formData.goodWithCats
-        }
+        },
+        images: formData.images
       };
 
       if (editingPet) {
@@ -192,8 +245,16 @@ const VendorAdoptionPage = ({ user }) => {
       specialNeeds: pet.specialNeeds || '',
       goodWithKids: pet.goodWith?.kids ?? true,
       goodWithDogs: pet.goodWith?.dogs ?? true,
-      goodWithCats: pet.goodWith?.cats ?? true
+      goodWithCats: pet.goodWith?.cats ?? true,
+      images: pet.images || []
     });
+    
+    if (pet.images && pet.images.length > 0) {
+      setImagePreview(pet.images[0]);
+    } else {
+      setImagePreview(null);
+    }
+    
     setShowModal(true);
   };
 
@@ -236,10 +297,14 @@ const VendorAdoptionPage = ({ user }) => {
       specialNeeds: '',
       goodWithKids: true,
       goodWithDogs: true,
-      goodWithCats: true
+      goodWithCats: true,
+      images: []
     });
     setEditingPet(null);
     setErrors({});
+    setImagePreview(null);
+    const fileInput = document.getElementById('imageUpload');
+    if (fileInput) fileInput.value = '';
   };
 
   if (user?.role !== 'vendor') {
@@ -286,8 +351,24 @@ const VendorAdoptionPage = ({ user }) => {
           {pets.map(pet => (
             <div key={pet._id} className="center-card">
               <div className="center-card-header">
-                <h3>{pet.name}</h3>
-                <p className="center-location">📍 {pet.shelter?.location}</p>
+                {pet.images && pet.images.length > 0 ? (
+                  <img 
+                    src={pet.images[0]} 
+                    alt={pet.name}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextElementSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : (
+                  <div className="no-image-placeholder">
+                    No Image
+                  </div>
+                )}
+                <div className="center-header-info">
+                  <h3>{pet.name}</h3>
+                  <p className="center-location">📍 {pet.shelter?.location}</p>
+                </div>
               </div>
               <div className="center-card-body">
                 <div className="center-info-row">
@@ -371,6 +452,67 @@ const VendorAdoptionPage = ({ user }) => {
             </div>
 
             <form onSubmit={handleSubmit}>
+              {/* Image Upload Section */}
+              <div className="form-section">
+                <h3>Pet Image</h3>
+                <div className="form-group">
+                  <label>Upload Image (Max 5MB)</label>
+                  <input
+                    type="file"
+                    id="imageUpload"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={loading || uploadingImage}
+                    style={{ marginBottom: '1rem' }}
+                  />
+                  
+                  {uploadingImage && (
+                    <p style={{ color: '#3b82f6', fontSize: '0.875rem' }}>
+                      Uploading image...
+                    </p>
+                  )}
+                  
+                  {imagePreview && (
+                    <div style={{ position: 'relative', marginTop: '1rem' }}>
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        style={{
+                          width: '100%',
+                          maxHeight: '300px',
+                          objectFit: 'cover',
+                          borderRadius: '0.5rem',
+                          border: '2px solid #e5e7eb'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        disabled={loading}
+                        style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          cursor: 'pointer',
+                          fontSize: '1.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="form-section">
                 <h3>Pet Information</h3>
                 <div className="form-group">
@@ -685,7 +827,7 @@ const VendorAdoptionPage = ({ user }) => {
                 <button
                   type="submit"
                   className="btn btn-success"
-                  disabled={loading}
+                  disabled={loading || uploadingImage}
                 >
                   {loading ? 'Saving...' : (editingPet ? 'Update Pet' : 'Add Pet')}
                 </button>

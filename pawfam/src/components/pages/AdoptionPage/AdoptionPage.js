@@ -370,43 +370,53 @@ const AdoptionPage = ({ user }) => {
               ) : (
                 filteredPets.map(pet => (
                   <div key={pet.id} className="pet-card">
-              <div className="pet-image">
-                <img src={pet.image} alt={pet.name} />
-                <div className="pet-status">{pet.status}</div>
-              </div>
-              <div className="pet-info">
-                <h3>{pet.name}</h3>
-                <div className="pet-details">
-                  <div className="detail-item">
-                    <strong>Type:</strong> {pet.type}
-                  </div>
-                  <div className="detail-item">
-                    <strong>Breed:</strong> {pet.breed}
-                  </div>
-                  <div className="detail-item">
-                    <strong>Age:</strong> {pet.age}
-                  </div>
-                  <div className="detail-item">
-                    <strong>Gender:</strong> {pet.gender}
-                  </div>
-                  <div className="detail-item">
-                    <strong>Size:</strong> {pet.size}
-                  </div>
-                  <div className="detail-item">
-                    <strong>Shelter:</strong> {pet.shelter}
-                  </div>
-                </div>
-                <p className="pet-description">{pet.description}</p>
-                <button
-                  className="meet-pet-btn"
-                  onClick={() => handleMeetPet(pet)}
-                  disabled={!user}
-                >
-                  {user ? `Meet ${pet.name}` : 'Login to Adopt'}
-                </button>
-              </div>
-            </div>
-            ))
+    <div className="pet-image">
+      <img 
+        src={
+          Array.isArray(pet.images) && pet.images.length > 0 
+            ? pet.images[0] 
+            : pet.image || `https://placehold.co/300x300/f59e0b/ffffff?text=${encodeURIComponent(pet.name)}`
+        } 
+        alt={pet.name}
+        onError={(e) => {
+          e.target.src = `https://placehold.co/300x300/f59e0b/ffffff?text=${encodeURIComponent(pet.name)}`;
+        }}
+      />
+      <div className="pet-status">{pet.status}</div>
+    </div>
+    <div className="pet-info">
+      <h3>{pet.name}</h3>
+      <div className="pet-details">
+        <div className="detail-item">
+          <strong>Type:</strong> {pet.type}
+        </div>
+        <div className="detail-item">
+          <strong>Breed:</strong> {pet.breed}
+        </div>
+        <div className="detail-item">
+          <strong>Age:</strong> {pet.age}
+        </div>
+        <div className="detail-item">
+          <strong>Gender:</strong> {pet.gender}
+        </div>
+        <div className="detail-item">
+          <strong>Size:</strong> {pet.size}
+        </div>
+        <div className="detail-item">
+          <strong>Shelter:</strong> {pet.shelter}
+        </div>
+      </div>
+      <p className="pet-description">{pet.description}</p>
+      <button
+        className="meet-pet-btn"
+        onClick={() => handleMeetPet(pet)}
+        disabled={!user}
+      >
+        {user ? `Meet ${pet.name}` : 'Login to Adopt'}
+      </button>
+    </div>
+  </div>
+                ))
           )}
         </div>
       )}
