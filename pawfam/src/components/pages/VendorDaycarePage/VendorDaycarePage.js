@@ -36,9 +36,12 @@ const VendorDaycarePage = ({ user }) => {
     operatingHours: {
       openTime: '',
       closeTime: ''
-    }
+    },
+    images: []
   });
   const [errors, setErrors] = useState({});
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchMyCenters();
@@ -83,6 +86,58 @@ const VendorDaycarePage = ({ user }) => {
         ? prev[field].filter(item => item !== value)
         : [...prev[field], value]
     }));
+  };
+
+  // NEW: Handle image upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    const reader = new FileReader();
+    
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setImagePreview(base64String);
+      setFormData(prev => ({
+        ...prev,
+        images: [base64String]
+      }));
+      setUploadingImage(false);
+    };
+
+    reader.onerror = () => {
+      alert('Error reading file');
+      setUploadingImage(false);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  // NEW: Remove image
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setFormData(prev => ({
+      ...prev,
+      images: []
+    }));
+    // Clear file input
+    const fileInput = document.getElementById('imageUpload');
+    if (fileInput) fileInput.value = '';
   };
 
   const validateForm = () => {
@@ -173,8 +228,17 @@ const VendorDaycarePage = ({ user }) => {
       facilities: (center.facilities || []).join(', '),
       capacity: center.capacity,
       description: center.description,
-      operatingHours: center.operatingHours || { openTime: '', closeTime: '' }
+      operatingHours: center.operatingHours || { openTime: '', closeTime: '' },
+      images: center.images || []
     });
+    
+    // Set image preview if center has images
+    if (center.images && center.images.length > 0) {
+      setImagePreview(center.images[0]);
+    } else {
+      setImagePreview(null);
+    }
+    
     setShowModal(true);
   };
 
@@ -210,10 +274,15 @@ const VendorDaycarePage = ({ user }) => {
       facilities: '',
       capacity: '',
       description: '',
-      operatingHours: { openTime: '', closeTime: '' }
+      operatingHours: { openTime: '', closeTime: '' },
+      images: []
     });
     setEditingCenter(null);
     setErrors({});
+    setImagePreview(null);
+    // Clear file input
+    const fileInput = document.getElementById('imageUpload');
+    if (fileInput) fileInput.value = '';
   };
 
   if (user?.role !== 'vendor') {
@@ -260,6 +329,34 @@ const VendorDaycarePage = ({ user }) => {
           {centers.map(center => (
             <div key={center._id} className="center-card">
               <div className="center-card-header">
+                {/* NEW: Display image if available */}
+                {center.images && center.images.length > 0 ? (
+                  <img 
+                    src={center.images[0]} 
+                    alt={center.name}
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      objectFit: 'cover',
+                      marginBottom: '1rem',
+                      borderRadius: '0.5rem'
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%',
+                    height: '200px',
+                    backgroundColor: '#e5e7eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '1rem',
+                    borderRadius: '0.5rem',
+                    color: '#6b7280'
+                  }}>
+                    No Image
+                  </div>
+                )}
                 <h3>{center.name}</h3>
                 <p className="center-location">📍 {center.location}</p>
               </div>
@@ -342,6 +439,67 @@ const VendorDaycarePage = ({ user }) => {
             </div>
 
             <form onSubmit={handleSubmit}>
+              {/* NEW: Image Upload Section */}
+              <div className="form-section">
+                <h3>Center Image</h3>
+                <div className="form-group">
+                  <label>Upload Image (Max 5MB)</label>
+                  <input
+                    type="file"
+                    id="imageUpload"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={loading || uploadingImage}
+                    style={{ marginBottom: '1rem' }}
+                  />
+                  
+                  {uploadingImage && (
+                    <p style={{ color: '#3b82f6', fontSize: '0.875rem' }}>
+                      Uploading image...
+                    </p>
+                  )}
+                  
+                  {imagePreview && (
+                    <div style={{ position: 'relative', marginTop: '1rem' }}>
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        style={{
+                          width: '100%',
+                          maxHeight: '300px',
+                          objectFit: 'cover',
+                          borderRadius: '0.5rem',
+                          border: '2px solid #e5e7eb'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        disabled={loading}
+                        style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          cursor: 'pointer',
+                          fontSize: '1.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="form-section">
                 <h3>Basic Information</h3>
                 <div className="form-group">
@@ -583,7 +741,7 @@ const VendorDaycarePage = ({ user }) => {
                 <button
                   type="submit"
                   className="btn btn-success"
-                  disabled={loading}
+                  disabled={loading || uploadingImage}
                 >
                   {loading ? 'Saving...' : (editingCenter ? 'Update Center' : 'Create Center')}
                 </button>

@@ -24,16 +24,13 @@ const PetServicesPage = ({ user }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
   
-  // NEW: State for daycare centers
   const [daycareCenters, setDaycareCenters] = useState([]);
   const [centersLoading, setCentersLoading] = useState(true);
 
-  // Fetch daycare centers on component mount
   useEffect(() => {
     fetchDaycareCenters();
   }, []);
 
-  // Fetch user's pets and profile when component mounts
   useEffect(() => {
     if (user) {
       fetchUserPets();
@@ -41,7 +38,6 @@ const PetServicesPage = ({ user }) => {
     }
   }, [user]);
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchKeyword);
@@ -50,7 +46,6 @@ const PetServicesPage = ({ user }) => {
     return () => clearTimeout(timer);
   }, [searchKeyword]);
 
-  // NEW: Fetch daycare centers from API
   const fetchDaycareCenters = async () => {
     try {
       setCentersLoading(true);
@@ -191,7 +186,6 @@ const PetServicesPage = ({ user }) => {
     });
   };
 
-  // Filter daycare centers based on search keyword
   const filteredCenters = daycareCenters.filter(center => {
     if (!debouncedSearch) return true;
 
@@ -226,7 +220,6 @@ const PetServicesPage = ({ user }) => {
       const totalAmount = days * selectedCenter.pricePerDay;
 
       const bookingPayload = {
-        // include center id for server to link booking to vendor/center
         daycareCenterId: selectedCenter._id,
         daycareCenter: {
           name: selectedCenter.name,
@@ -305,7 +298,10 @@ const PetServicesPage = ({ user }) => {
                       ? center.images[0] 
                       : `https://placehold.co/300x200/3b82f6/ffffff?text=${encodeURIComponent(center.name)}`
                     } 
-                    alt={center.name} 
+                    alt={center.name}
+                    onError={(e) => {
+                      e.target.src = `https://placehold.co/300x200/3b82f6/ffffff?text=${encodeURIComponent(center.name)}`;
+                    }}
                   />
                 </div>
                 <div className="center-info">
