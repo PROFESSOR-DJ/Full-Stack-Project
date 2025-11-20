@@ -326,39 +326,29 @@ const VendorDaycarePage = ({ user }) => {
         </div>
       ) : (
         <div className="centers-grid">
+          
+
           {centers.map(center => (
             <div key={center._id} className="center-card">
               <div className="center-card-header">
-                {/* NEW: Display image if available */}
                 {center.images && center.images.length > 0 ? (
                   <img 
                     src={center.images[0]} 
                     alt={center.name}
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      objectFit: 'cover',
-                      marginBottom: '1rem',
-                      borderRadius: '0.5rem'
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextElementSibling.style.display = 'flex';
                     }}
                   />
                 ) : (
-                  <div style={{
-                    width: '100%',
-                    height: '200px',
-                    backgroundColor: '#e5e7eb',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '1rem',
-                    borderRadius: '0.5rem',
-                    color: '#6b7280'
-                  }}>
+                  <div className="no-image-placeholder">
                     No Image
                   </div>
                 )}
-                <h3>{center.name}</h3>
-                <p className="center-location">📍 {center.location}</p>
+                <div className="center-header-info">
+                  <h3>{center.name}</h3>
+                  <p className="center-location">📍 {center.location}</p>
+                </div>
               </div>
               <div className="center-card-body">
                 <div className="center-info-row">
