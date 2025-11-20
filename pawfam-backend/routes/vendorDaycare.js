@@ -86,6 +86,17 @@ router.post('/centers', auth, async (req, res) => {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
+    // Validate image size if provided (limit to 5MB per image)
+    if (images && Array.isArray(images)) {
+      for (const img of images) {
+        if (img && img.length > 7000000) { // ~5MB in base64
+          return res.status(400).json({ 
+            message: 'Image size too large. Please use images under 5MB.' 
+          });
+        }
+      }
+    }
+
     const center = new DaycareCenter({
       vendor: req.user._id,
       name,
@@ -156,6 +167,17 @@ router.put('/centers/:id', auth, async (req, res) => {
       images
     } = req.body;
 
+    // Validate image size if provided
+    if (images && Array.isArray(images)) {
+      for (const img of images) {
+        if (img && img.length > 7000000) {
+          return res.status(400).json({ 
+            message: 'Image size too large. Please use images under 5MB.' 
+          });
+        }
+      }
+    }
+
     // Update fields
     if (name) center.name = name;
     if (location) center.location = location;
@@ -172,7 +194,7 @@ router.put('/centers/:id', auth, async (req, res) => {
     if (capacity !== undefined) center.capacity = capacity;
     if (description) center.description = description;
     if (operatingHours) center.operatingHours = operatingHours;
-    if (images) center.images = images;
+    if (images !== undefined) center.images = images;
 
     await center.save();
 
@@ -225,8 +247,6 @@ router.get('/bookings', auth, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Vendor role required.' });
     }
 
-    // To support older bookings (created before we stored vendor/daycareCenterId),
-    // first get the vendor's centers and then search bookings by vendor, centerId or center name.
     const centers = await DaycareCenter.find({ vendor: req.user._id }).lean();
     const centerIds = centers.map(c => c._id).filter(Boolean);
     const centerNames = centers.map(c => c.name).filter(Boolean);
