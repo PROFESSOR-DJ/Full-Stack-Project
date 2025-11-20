@@ -59,13 +59,22 @@ export const authAPI = {
     const response = await API.post('/auth/verify-reset-otp', { email, otp });
     return response.data;
   },
+  // FIXED: Added resetPassword method
+  resetPassword: async (email, otp, newPassword) => {
+    const response = await API.post('/auth/reset-password', { 
+      email, 
+      otp, 
+      newPassword 
+    });
+    return response.data;
+  },
   getCurrentUser: async () => {
     const response = await API.get('/auth/me');
     return response.data;
   },
 };
 
-// Daycare API - UPDATED with new endpoints
+// Daycare API
 export const daycareAPI = {
   createBooking: async (bookingData) => {
     const response = await API.post('/daycare/bookings', bookingData);
@@ -156,7 +165,6 @@ export const vendorDaycareAPI = {
     const response = await API.get('/vendor/daycare/centers');
     return response.data;
   },
-  // Get bookings for vendor's centers
   getBookings: async () => {
     const response = await API.get('/vendor/daycare/bookings');
     return response.data;
@@ -189,7 +197,6 @@ export const vendorAdoptionAPI = {
     const response = await API.get('/vendor/adoption/my-pets');
     return response.data;
   },
-  // Get adoption applications for this vendor's pets
   getApplications: async () => {
     const response = await API.get('/vendor/adoption/applications');
     return response.data;
@@ -218,7 +225,6 @@ export const vendorAccessoriesAPI = {
     const response = await API.get('/vendor/accessories/my-products');
     return response.data;
   },
-  // Get orders that include this vendor's products
   getOrders: async () => {
     const response = await API.get('/vendor/accessories/orders');
     return response.data;
